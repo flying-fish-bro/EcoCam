@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EcoCam – The Product</title>
+  <link rel="icon" type="image/png" href="assets/logo.png"/>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* ── UPLOAD ZONE ── */
+    .upload-section { background: var(--dark); padding: 5rem 2rem; }
+    .upload-section .section-title { color: var(--white); }
+    .upload-section .section-sub   { color: #888; }
+
+    .drop-zone {
+      border: 3px dashed #444;
+      border-radius: 20px;
+      background: #111;
+      padding: 3.5rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .drop-zone.dragover {
+      border-color: var(--yellow);
+      background: #1e1c00;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-icon { font-size: 3.5rem; margin-bottom: 1rem; display: block; }
+    .drop-zone h3 {
+      font-family: 'Space Mono', monospace; font-weight: 700;
+      font-size: 1rem; color: var(--white); margin-bottom: .4rem;
+    }
+    .drop-zone p { font-size: .875rem; color: #666; }
+    .drop-zone p span { color: var(--yellow); text-decoration: underline; cursor: pointer; }
+
+    /* IMAGE PREVIEW GRID */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: .75rem;
+      margin-top: 1.5rem;
+    }
+    .preview-thumb {
+      position: relative;
+      aspect-ratio: 1;
+      border: var(--outline);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .preview-thumb img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .preview-thumb .remove-btn {
+      position: absolute; top: 4px; right: 4px;
+      background: var(--dark); color: var(--white);
+      border: 2px solid var(--dark); border-radius: 50%;
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .7rem; cursor: pointer; font-weight: 700;
+      transition: background .15s;
+    }
+    .preview-thumb .remove-btn:hover { background: #cc3333; }
+
+    .upload-counter {
+      font-family: 'Space Mono', monospace;
+      font-size: .8rem; color: #666;
+      margin-top: .75rem;
+    }
+    .upload-counter span { color: var(--yellow); font-weight: 700; }
+
+    /* PRICE + SUBMIT ROW */
+    .action-row {
+      display: flex; flex-wrap: wrap; gap: 1rem;
+      align-items: center; margin-top: 2rem;
+    }
+
+    .price-select-wrap { position: relative; }
+    .price-select-wrap select {
+      appearance: none;
+      background: var(--white);
+      border: var(--outline);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      font-family: 'Space Mono', monospace;
+      font-weight: 700; font-size: .85rem;
+      color: var(--dark);
+      padding: .75rem 3rem .75rem 1.25rem;
+      cursor: pointer;
+      transition: transform .12s, box-shadow .12s;
+    }
+    .price-select-wrap select:hover { transform: translate(-2px,-2px); box-shadow: 7px 7px 0 var(--dark); }
+    .price-select-wrap::after {
+      content: '▾';
+      position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+      font-size: .85rem; pointer-events: none; color: var(--dark);
+    }
+
+    .btn-submit {
+      background: var(--green); color: var(--dark);
+      border: var(--outline); box-shadow: var(--shadow);
+      font-family: 'Space Mono', monospace; font-weight: 700;
+      font-size: .9rem; letter-spacing: .05em;
+      padding: .8rem 2rem; border-radius: 10px;
+      cursor: pointer; transition: transform .12s, box-shadow .12s;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .btn-submit:hover   { transform: translate(-3px,-3px); box-shadow: 8px 8px 0 var(--dark); }
+    .btn-submit:active  { transform: translate(2px,2px);   box-shadow: 2px 2px 0 var(--dark); }
+    .btn-submit:disabled {
+      opacity: .45; cursor: not-allowed;
+      transform: none; box-shadow: var(--shadow);
+    }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2.5px solid var(--dark);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading .spinner { display: block; }
+    .loading .btn-label { display: none; }
+
+    .error-msg {
+      display: none;
+      background: #2a0a0a; border: 2px solid #cc3333;
+      border-radius: 10px; padding: .75rem 1.25rem;
+      color: #ff7070; font-family: 'Space Mono', monospace; font-size: .8rem;
+      margin-top: 1rem;
+    }
+
+    /* ── RESULTS SECTION ── */
+    .results-section {
+      display: none;
+      padding: 5rem 2rem;
+      background: var(--white);
+      animation: slideIn .4s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .results-section.visible { display: block; }
+
+    /* Returned images strip */
+    .result-images-header {
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .result-images-header h2 { font-weight: 900; font-size: 1.6rem; }
+    .result-count-badge {
+      background: var(--teal); color: var(--dark);
+      font-family: 'Space Mono', monospace; font-weight: 700; font-size: .75rem;
+      padding: .3rem .8rem; border-radius: 100px;
+      border: var(--outline); box-shadow: 3px 3px 0 var(--dark);
+    }
+
+    .result-images-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: .75rem;
+      margin-bottom: 3.5rem;
+    }
+    .result-img-thumb {
+      aspect-ratio: 1; border: var(--outline); border-radius: 10px;
+      overflow: hidden; box-shadow: var(--shadow);
+      background: #ddd;
+    }
+    .result-img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* Product result cards */
+    .products-header {
+      font-weight: 900; font-size: clamp(1.4rem, 3vw, 2rem);
+      margin-bottom: 1.75rem;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .product-result-card {
+      background: var(--white);
+      border: var(--outline);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .product-result-card:hover { transform: translate(-3px,-3px); box-shadow: 8px 8px 0 var(--dark); }
+
+    .product-result-card .card-header {
+      background: var(--dark);
+      padding: 1.25rem 1.5rem;
+      border-bottom: var(--outline);
+    }
+    .product-result-card .card-header h3 {
+      font-weight: 900; font-size: 1.1rem; color: var(--white);
+      margin-bottom: .25rem;
+    }
+    .product-result-card .card-header .card-meta {
+      font-family: 'Space Mono', monospace; font-size: .7rem;
+      color: var(--teal); letter-spacing: .06em;
+    }
+
+    .product-result-card .card-body { padding: 1.25rem 1.5rem; }
+    .product-result-card .card-desc {
+      font-size: .9rem; line-height: 1.65; color: #444; margin-bottom: 1.25rem;
+    }
+
+    .buy-links-label {
+      font-family: 'Space Mono', monospace; font-weight: 700;
+      font-size: .7rem; text-transform: uppercase; letter-spacing: .1em;
+      color: #888; margin-bottom: .6rem;
+    }
+    .buy-links { list-style: none; display: flex; flex-direction: column; gap: .4rem; }
+    .buy-links li a {
+      display: flex; align-items: center; gap: .5rem;
+      background: var(--white); border: 2px solid var(--dark);
+      border-radius: 8px; padding: .5rem .9rem;
+      font-family: 'Space Mono', monospace; font-size: .78rem; font-weight: 700;
+      color: var(--dark); text-decoration: none;
+      box-shadow: 3px 3px 0 var(--dark);
+      transition: transform .12s, box-shadow .12s;
+    }
+    .buy-links li a:hover { transform: translate(-2px,-2px); box-shadow: 5px 5px 0 var(--dark); }
+    .buy-links li a .link-num {
+      background: var(--yellow); border-radius: 4px;
+      padding: .1rem .4rem; font-size: .65rem; flex-shrink: 0;
+    }
+    .buy-links li a .link-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .price-tag {
+      display: inline-block; background: var(--green); color: var(--dark);
+      font-family: 'Space Mono', monospace; font-weight: 700; font-size: .85rem;
+      padding: .25rem .75rem; border-radius: 6px; border: 2px solid var(--dark);
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="index.html">
+      <img src="assets/logo.png" alt="EcoCam Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+      <div class="nav-logo-placeholder" style="display:none">EC</div>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li class="nav-sep">|</li>
+      <li><a href="product.html" class="active">EcoCam</a></li>
+      <li class="nav-sep">|</li>
+      <li><a href="aboutus.html">About Us</a></li>
+    </ul>
+  </nav>
+
+  <div class="page-hero">
+    <div class="page-hero-bg"><span></span><span></span></div>
+    <div class="badge badge-yellow">The Hardware</div>
+    <h1>Meet <span>EcoCam Pro.</span></h1>
+    <p>Everything you need to document wildlife — powered by sunlight, guided by AI, built to survive a decade in the harshest places on Earth.</p>
+  </div>
+
+  <section class="section">
+    <div class="section-inner">
+      <div class="showcase-grid">
+        <div class="cam-box">📷</div>
+        <div>
+          <h2 class="section-title">The flagship model.</h2>
+          <p class="section-sub">Built from the ground up for science, conservation, and anyone who refuses to miss a sighting.</p>
+          <ul class="spec-bullets">
+            <li><span class="tag">OPTICS</span><span><strong>50 MP sensor</strong> with f/1.6 wide aperture — crisp detail even in low light</span></li>
+            <li><span class="tag">IR</span><span><strong>940nm no-glow</strong> infrared — completely invisible to animals at night</span></li>
+            <li><span class="tag">AI</span><span><strong>On-device species ID</strong> — 2,200+ species, 200ms classification, no signal needed</span></li>
+            <li><span class="tag">POWER</span><span><strong>6-panel solar array</strong> feeding a 12,000mAh lithium battery</span></li>
+            <li><span class="tag">COMMS</span><span><strong>Iridium satellite modem</strong> — photo alerts from anywhere on Earth</span></li>
+            <li><span class="tag">BUILD</span><span><strong>IP68 + MIL-STD-810H</strong> — rated from −40°C to +70°C</span></li>
+          </ul>
+          <a href="#specs" class="btn btn-primary">View Full Specs</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── UPLOAD & PRICE SECTION ── -->
+  <section class="upload-section" id="upload">
+    <div class="section-inner">
+      <h2 class="section-title">Analyse Your Product</h2>
+      <p class="section-sub">Upload up to 10 images of a product, select a price tier, and we'll find the best places to buy it.</p>
+
+      <!-- Drop Zone -->
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*" multiple/>
+        <span class="drop-icon">📂</span>
+        <h3>Drag & drop images here</h3>
+        <p>or <span>browse to select files</span> &nbsp;·&nbsp; PNG, JPG, WEBP &nbsp;·&nbsp; max 10 images</p>
+      </div>
+
+      <div class="preview-grid" id="previewGrid"></div>
+      <p class="upload-counter" id="uploadCounter" style="display:none"><span id="imgCount">0</span> / 10 images selected</p>
+
+      <!-- Action Row -->
+      <div class="action-row">
+        <div class="price-select-wrap">
+          <select id="priceSelect">
+            <option value="">— Select a price tier —</option>
+            <option value="budget">Budget  (&lt; $50)</option>
+            <option value="mid">Mid-range  ($50 – $200)</option>
+            <option value="premium">Premium  ($200 – $500)</option>
+            <option value="luxury">Luxury  ($500+)</option>
+          </select>
+        </div>
+        <button class="btn-submit" id="submitBtn" disabled>
+          <span class="spinner" id="spinner"></span>
+          <span class="btn-label">🔍 Find Best Prices</span>
+        </button>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+  </section>
+
+  <!-- ── RESULTS SECTION ── -->
+  <section class="results-section" id="resultsSection">
+    <div class="section-inner">
+
+      <!-- Returned images -->
+      <div class="result-images-header">
+        <h2>Processed Images</h2>
+        <span class="result-count-badge" id="resultImgBadge">0 returned</span>
+      </div>
+      <div class="result-images-grid" id="resultImagesGrid"></div>
+
+      <!-- Product cards -->
+      <p class="products-header" id="productsHeader"></p>
+      <div class="products-grid" id="productsGrid"></div>
+
+    </div>
+  </section>
+
+  <section class="specs-section" id="specs">
+    <div class="section-inner">
+      <h2 class="section-title">Full Specifications</h2>
+      <p class="section-sub">Every number, every detail.</p>
+      <table>
+        <thead><tr><th>Specification</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td>Image Sensor</td><td>50 MP 1/1.5" BSI CMOS</td></tr>
+          <tr><td>Video Resolution</td><td>4K @ 60fps · 1080p @ 240fps slow-motion</td></tr>
+          <tr><td>Trigger Speed</td><td>0.08 seconds</td></tr>
+          <tr><td>Detection Range</td><td>35 m (motion) · 20 m (IR night vision)</td></tr>
+          <tr><td>Infrared LEDs</td><td>48 × 940nm no-glow, auto-intensity</td></tr>
+          <tr><td>AI Processor</td><td>Custom 4-TOPS neural engine (EcoChip v2)</td></tr>
+          <tr><td>Species Database</td><td>2,200+ species — mammals, birds, reptiles, amphibians</td></tr>
+          <tr><td>Connectivity</td><td>Iridium satellite · Bluetooth 5.3 · USB-C</td></tr>
+          <tr><td>Storage</td><td>256 GB internal + microSD up to 2 TB</td></tr>
+          <tr><td>Battery</td><td>12,000 mAh Li-NMC with solar top-up</td></tr>
+          <tr><td>Operating Temp</td><td>−40°C to +70°C</td></tr>
+          <tr><td>Ingress Protection</td><td>IP68 — 2 m submersion for 60 minutes</td></tr>
+          <tr><td>Dimensions</td><td>155 × 95 × 75 mm</td></tr>
+          <tr><td>Weight</td><td>620 g (with mounting bracket)</td></tr>
+          <tr><td>Warranty</td><td>3-year field warranty</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-inner">
+      <h2 class="section-title">Choose Your Kit</h2>
+      <p class="section-sub">From weekend naturalist to long-term research deployments — there's an EcoCam for that.</p>
+      <div class="pricing-grid">
+        <div class="price-card">
+          <h3>Starter</h3>
+          <div class="price">$349</div>
+          <ul>
+            <li>EcoCam Standard</li>
+            <li>32 MP sensor</li>
+            <li>Bluetooth sync only</li>
+            <li>1-year warranty</li>
+          </ul>
+          <a href="#upload" class="btn btn-teal">Select Price</a>
+        </div>
+        <div class="price-card featured">
+          <h3>Pro ⭐</h3>
+          <div class="price">$699</div>
+          <ul>
+            <li>EcoCam Pro</li>
+            <li>50 MP + 4K video</li>
+            <li>Satellite modem</li>
+            <li>AI species ID</li>
+            <li>3-year warranty</li>
+          </ul>
+          <a href="#upload" class="btn btn-primary">Select Price</a>
+        </div>
+        <div class="price-card">
+          <h3>Research</h3>
+          <div class="price">Custom</div>
+          <ul>
+            <li>Bulk pricing (5+)</li>
+            <li>Custom AI models</li>
+            <li>API data access</li>
+            <li>Dedicated support</li>
+          </ul>
+          <a href="aboutus.html" class="btn btn-green">Contact Us</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2025 <span>EcoCam</span> · Capturing the wild, protecting the planet</p>
+  </footer>
+
+  <script>
+    const MAX_IMAGES = 10;
+    let files = []; // array of File objects
+
+    const dropZone    = document.getElementById('dropZone');
+    const fileInput   = document.getElementById('fileInput');
+    const previewGrid = document.getElementById('previewGrid');
+    const uploadCounter = document.getElementById('uploadCounter');
+    const imgCount    = document.getElementById('imgCount');
+    const priceSelect = document.getElementById('priceSelect');
+    const submitBtn   = document.getElementById('submitBtn');
+    const spinner     = document.getElementById('spinner');
+    const errorMsg    = document.getElementById('errorMsg');
+    const resultsSection = document.getElementById('resultsSection');
+
+    /* ── Drag & drop events ── */
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      addFiles([...e.dataTransfer.files]);
+    });
+    fileInput.addEventListener('change', () => { addFiles([...fileInput.files]); fileInput.value = ''; });
+
+    function addFiles(newFiles) {
+      const imageFiles = newFiles.filter(f => f.type.startsWith('image/'));
+      const slots = MAX_IMAGES - files.length;
+      if (slots <= 0) return showError(`Maximum of ${MAX_IMAGES} images already selected.`);
+      hideError();
+      imageFiles.slice(0, slots).forEach(f => files.push(f));
+      if (imageFiles.length > slots) showError(`Only ${slots} image(s) added — maximum of ${MAX_IMAGES} reached.`);
+      renderPreviews();
+      updateSubmitState();
+    }
+
+    function renderPreviews() {
+      previewGrid.innerHTML = '';
+      files.forEach((f, i) => {
+        const url = URL.createObjectURL(f);
+        const thumb = document.createElement('div');
+        thumb.className = 'preview-thumb';
+        thumb.innerHTML = `
+          <img src="${url}" alt="Preview ${i+1}"/>
+          <button class="remove-btn" data-idx="${i}" title="Remove">✕</button>
+        `;
+        previewGrid.appendChild(thumb);
+      });
+      previewGrid.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          files.splice(parseInt(btn.dataset.idx), 1);
+          renderPreviews();
+          updateSubmitState();
+        });
+      });
+      uploadCounter.style.display = files.length ? 'block' : 'none';
+      imgCount.textContent = files.length;
+    }
+
+    /* ── Enable/disable submit ── */
+    priceSelect.addEventListener('change', updateSubmitState);
+    function updateSubmitState() {
+      submitBtn.disabled = !(files.length > 0 && priceSelect.value);
+    }
+
+    /* ── Error helpers ── */
+    function showError(msg) { errorMsg.textContent = msg; errorMsg.style.display = 'block'; }
+    function hideError()    { errorMsg.style.display = 'none'; }
+
+    /* ── Submit ── */
+    submitBtn.addEventListener('click', async () => {
+      hideError();
+      setLoading(true);
+
+      try {
+        // 1. POST images to /api/images
+        const formData = new FormData();
+        files.forEach((f, i) => formData.append(`image_${i}`, f));
+
+        const imgRes = await fetch('/api/images', { method: 'POST', body: formData });
+        if (!imgRes.ok) throw new Error(`Image upload failed: ${imgRes.status} ${imgRes.statusText}`);
+
+        // 2. PATCH /api/price with selected price tier
+        const priceRes = await fetch('/api/price', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ price_tier: priceSelect.value })
+        });
+        if (!priceRes.ok) throw new Error(`Price lookup failed: ${priceRes.status} ${priceRes.statusText}`);
+
+        const data = await priceRes.json();
+        renderResults(data);
+
+      } catch (err) {
+        showError(`Error: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    function setLoading(on) {
+      submitBtn.disabled = on;
+      submitBtn.classList.toggle('loading', on);
+      if (!on) updateSubmitState();
+    }
+
+    /* ── Render results ── */
+    function renderResults(data) {
+      /*
+        Expected shape:
+        {
+          images: [ { url: "...", label: "..." }, ... ],   // y images
+          products: [
+            {
+              name: "...",
+              description: "...",
+              price: "...",
+              meta: "...",         // optional subtitle
+              buy_links: [
+                { label: "...", url: "..." },  // top 3
+                ...
+              ]
+            },
+            ...
+          ]
+        }
+      */
+
+      const images   = data.images   || [];
+      const products = data.products || [];
+
+      // ── Returned images ──
+      document.getElementById('resultImgBadge').textContent = `${images.length} returned`;
+      const imgGrid = document.getElementById('resultImagesGrid');
+      imgGrid.innerHTML = '';
+      images.forEach((img, i) => {
+        const div = document.createElement('div');
+        div.className = 'result-img-thumb';
+        div.innerHTML = `<img src="${img.url}" alt="${img.label || 'Result image ' + (i+1)}"/>`;
+        imgGrid.appendChild(div);
+      });
+
+      // ── Product cards ──
+      const header = document.getElementById('productsHeader');
+      header.textContent = `${products.length} Product${products.length !== 1 ? 's' : ''} Found`;
+
+      const grid = document.getElementById('productsGrid');
+      grid.innerHTML = '';
+      products.forEach(p => {
+        const links = (p.buy_links || []).slice(0, 3);
+        const linksHtml = links.map((l, i) => `
+          <li>
+            <a href="${l.url}" target="_blank" rel="noopener">
+              <span class="link-num">#${i+1}</span>
+              <span class="link-text">${l.label || l.url}</span>
+            </a>
+          </li>
+        `).join('');
+
+        const card = document.createElement('div');
+        card.className = 'product-result-card';
+        card.innerHTML = `
+          <div class="card-header">
+            <h3>${p.name || 'Unknown Product'}</h3>
+            ${p.meta ? `<div class="card-meta">${p.meta}</div>` : ''}
+          </div>
+          <div class="card-body">
+            ${p.price ? `<div class="price-tag">${p.price}</div>` : ''}
+            ${p.description ? `<p class="card-desc">${p.description}</p>` : ''}
+            ${links.length ? `
+              <div class="buy-links-label">Top ${links.length} place${links.length !== 1 ? 's' : ''} to buy</div>
+              <ul class="buy-links">${linksHtml}</ul>
+            ` : '<p style="font-size:.85rem;color:#888">No purchase links available.</p>'}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // Reveal section and scroll to it
+      resultsSection.classList.add('visible');
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  </script>
+
+</body>
+</html>
